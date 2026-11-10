@@ -1,0 +1,42 @@
+name: Build iOS IPA
+
+on:
+  workflow_dispatch: # Allows you to manually trigger the button
+
+jobs:
+  build:
+    name: Compile and Package IPA
+    runs-on: macos-14 # Runs on GitHub's free M-series Mac cloud environments
+
+    steps:
+      - name: Checkout Repository
+        uses: actions/checkout@v4
+
+      - name: Set up Homebrew and Dependencies
+        run: |
+          brew install cmake pkg-config opus libvpx
+          echo "Dependencies installed successfully"
+
+      - name: Create Build Environment
+        run: |
+          mkdir -p build-ios
+          mkdir -p local/games
+          mkdir -p local/keys
+
+      - name: Build Application Binary
+        run: |
+          cmake -B build-ios -DCMAKE_BUILD_TYPE=Release -DPLATFORM=iOS
+          cmake --build build-ios --config Release
+
+      - name: Package Unsigned IPA
+        run: |
+          mkdir -p Payload
+          # Locates and bundles the compiled application bundle into standard iOS format
+          cp -r build-ios/Release-iphoneos/*.app Payload/ 2>/dev/null || cp -r build-ios/*.app Payload/
+          zip -r totk-mobile.ipa Payload
+
+      - name: Upload Finished Artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: totk-mobile-ipa
+          path: totk-mobile.ipa
